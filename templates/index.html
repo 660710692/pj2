@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Water Hyacinth Detection</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🌿 Water Hyacinth Detection Dashboard</h1>
+
+    <div class="status-panel">
+
+        <div class="card">
+
+            <h3>Camera</h3>
+
+            <p id="camera">Connecting...</p>
+
+        </div>
+
+        <div class="card">
+
+            <h3>FPS</h3>
+
+            <p id="fps">0</p>
+
+        </div>
+
+        <div class="card">
+
+            <h3>Detected</h3>
+
+            <p id="detected">0</p>
+
+        </div>
+
+        <div class="card">
+
+            <h3>Timestamp</h3>
+
+            <p id="timestamp">-</p>
+
+        </div>
+
+    </div>
+
+    <div class="video-container">
+
+        <img src="{{ url_for('video_feed') }}"
+             id="video">
+
+    </div>
+
+</div>
+
+<script>
+
+function updateStatus(){
+
+    fetch("/status")
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        document.getElementById("camera").innerHTML=data.camera;
+
+        document.getElementById("fps").innerHTML=data.fps;
+
+        document.getElementById("detected").innerHTML=data.detected;
+
+        document.getElementById("timestamp").innerHTML=data.timestamp;
+
+    });
+
+}
+
+setInterval(updateStatus,500);
+
+</script>
+
+</body>
+
+</html>

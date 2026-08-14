@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Water Hyacinth - Admin Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <div class="logo-icon">🌿</div>
+            <div>
+                <h2>Water Hyacinth</h2>
+                <span>Management System</span>
+            </div>
+        </div>
+
+        <nav>
+
+            <a href="/" class="nav-item">
+                <span>📹</span>
+                Live Detection
+            </a>
+
+            <a href="/admin" class="nav-item active">
+                <span>📊</span>
+                Admin Dashboard
+            </a>
+
+        </nav>
+
+        <div class="system-status">
+            <span class="status-dot"></span>
+            System Online
+        </div>
+
+    </aside>
+
+
+    <!-- Main Content -->
+    <main class="main">
+
+        <header class="topbar">
+
+            <div>
+                <h1>Admin Dashboard</h1>
+                <p>System overview and monitoring</p>
+            </div>
+
+            <div class="datetime">
+                <strong id="currentDate">--</strong>
+                <span id="currentTime">--:--:--</span>
+            </div>
+
+        </header>
+
+
+        <!-- Summary Cards -->
+        <section class="cards">
+
+            <div class="card">
+                <div class="card-icon">🌿</div>
+
+                <div>
+                    <p>Detection Today</p>
+                    <h2>127</h2>
+                    <span class="positive">↑ 12% from yesterday</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-icon">🎯</div>
+
+                <div>
+                    <p>Average Confidence</p>
+                    <h2>84.6%</h2>
+                    <span class="positive">Detection Quality: Good</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-icon">💧</div>
+
+                <div>
+                    <p>Chemical Level</p>
+                    <h2>78%</h2>
+                    <span class="positive">Normal</span>
+                </div>
+            </div>
+
+
+            <div class="card">
+                <div class="card-icon">🚿</div>
+
+                <div>
+                    <p>Today's Sprays</p>
+                    <h2>12</h2>
+                    <span>1.1 L Used</span>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- Main Grid -->
+        <section class="dashboard-grid">
+
+
+            <!-- Detection Summary -->
+            <div class="panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h3>Detection Summary</h3>
+                        <p>Water hyacinth detection today</p>
+                    </div>
+                </div>
+
+                <div class="stats">
+
+                    <div class="stat-row">
+                        <span>Total Detection</span>
+                        <strong>127</strong>
+                    </div>
+
+                    <div class="stat-row">
+                        <span>Average Confidence</span>
+                        <strong>84.6%</strong>
+                    </div>
+
+                    <div class="stat-row">
+                        <span>Highest Confidence</span>
+                        <strong>98.2%</strong>
+                    </div>
+
+                    <div class="stat-row">
+                        <span>Detection Threshold</span>
+                        <strong>60%</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Device Status -->
+            <div class="panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h3>Device Status</h3>
+                        <p>Connected system devices</p>
+                    </div>
+                </div>
+
+
+                <div class="device">
+
+                    <div class="device-info">
+                        <div class="device-icon">🖥️</div>
+
+                        <div>
+                            <strong>Raspberry Pi</strong>
+                            <span>Edge Computing Device</span>
+                        </div>
+                    </div>
+
+                    <span class="badge online">Online</span>
+
+                </div>
+
+
+                <div class="device">
+
+                    <div class="device-info">
+                        <div class="device-icon">📷</div>
+
+                        <div>
+                            <strong>IP Camera</strong>
+                            <span>640 × 360 / 25 FPS</span>
+                        </div>
+                    </div>
+
+                    <span class="badge online">Connected</span>
+
+                </div>
+
+
+                <div class="device">
+
+                    <div class="device-info">
+                        <div class="device-icon">🚿</div>
+
+                        <div>
+                            <strong>Spray System</strong>
+                            <span>Automatic Spraying</span>
+                        </div>
+                    </div>
+
+                    <span class="badge standby">Standby</span>
+
+                </div>
+
+            </div>
+
+
+            <!-- Chemical Status -->
+            <div class="panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h3>Chemical Status</h3>
+                        <p>Spraying chemical information</p>
+                    </div>
+                </div>
+
+
+                <div class="chemical-level">
+
+                    <div class="chemical-value">
+                        <strong>78%</strong>
+                        <span>3.9 L remaining</span>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 78%;"></div>
+                    </div>
+
+                    <p class="chemical-normal">
+                        ● Chemical level is normal
+                    </p>
+
+                </div>
+
+
+                <div class="spray-summary">
+
+                    <div>
+                        <span>Today's Sprays</span>
+                        <strong>12</strong>
+                    </div>
+
+                    <div>
+                        <span>Total Used</span>
+                        <strong>1.1 L</strong>
+                    </div>
+
+                    <div>
+                        <span>Last Spray</span>
+                        <strong>14:32</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- System Information -->
+            <div class="panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h3>System Information</h3>
+                        <p>Edge device resources</p>
+                    </div>
+                </div>
+
+
+                <div class="resource">
+
+                    <div class="resource-label">
+                        <span>CPU Usage</span>
+                        <strong>42%</strong>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 42%;"></div>
+                    </div>
+
+                </div>
+
+
+                <div class="resource">
+
+                    <div class="resource-label">
+                        <span>Memory Usage</span>
+                        <strong>58%</strong>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 58%;"></div>
+                    </div>
+
+                </div>
+
+
+                <div class="resource">
+
+                    <div class="resource-label">
+                        <span>Temperature</span>
+                        <strong>54°C</strong>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 54%;"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Spray History -->
+        <section class="panel history-panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <h3>Spray History</h3>
+                    <p>Recent automatic spraying operations</p>
+                </div>
+
+                <button class="view-all">View All</button>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Detection</th>
+                            <th>Confidence</th>
+                            <th>Chemical Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+                            <td>14:32:18</td>
+                            <td>3 plants</td>
+                            <td>91%</td>
+                            <td>120 ml</td>
+                            <td><span class="badge success">Success</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>13:47:05</td>
+                            <td>2 plants</td>
+                            <td>86%</td>
+                            <td>80 ml</td>
+                            <td><span class="badge success">Success</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>12:21:43</td>
+                            <td>5 plants</td>
+                            <td>94%</td>
+                            <td>180 ml</td>
+                            <td><span class="badge success">Success</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>11:05:12</td>
+                            <td>1 plant</td>
+                            <td>78%</td>
+                            <td>50 ml</td>
+                            <td><span class="badge success">Success</span></td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- Activity Log -->
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <h3>System Activity</h3>
+                    <p>Recent system events</p>
+                </div>
+
+            </div>
+
+
+            <div class="activity">
+
+                <div class="activity-item">
+                    <span class="activity-dot success-dot"></span>
+
+                    <div>
+                        <strong>Spray operation completed</strong>
+                        <p>14:32:18</p>
+                    </div>
+                </div>
+
+
+                <div class="activity-item">
+                    <span class="activity-dot"></span>
+
+                    <div>
+                        <strong>Water hyacinth detected</strong>
+                        <p>14:31:54</p>
+                    </div>
+                </div>
+
+
+                <div class="activity-item">
+                    <span class="activity-dot"></span>
+
+                    <div>
+                        <strong>Camera connected</strong>
+                        <p>14:20:03</p>
+                    </div>
+                </div>
+
+
+                <div class="activity-item">
+                    <span class="activity-dot"></span>
+
+                    <div>
+                        <strong>Spray system ready</strong>
+                        <p>13:45:12</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script>
+
+        function updateClock() {
+
+            const now = new Date();
+
+            const date = now.toLocaleDateString(
+                'en-GB',
+                {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                }
+            );
+
+            const time = now.toLocaleTimeString(
+                'en-GB'
+            );
+
+            document.getElementById("currentDate").textContent = date;
+            document.getElementById("currentTime").textContent = time;
+        }
+
+        updateClock();
+
+        setInterval(updateClock, 1000);
+
+    </script>
+
+</body>
+
+</html>
+
