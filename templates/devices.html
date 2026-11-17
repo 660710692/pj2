@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}อุปกรณ์{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>อุปกรณ์</h1>
+        <p>เพิ่ม แก้ไข หรือลบจุดติดตั้ง และทดสอบปั๊มของแต่ละจุด</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-primary" id="addBtn" type="button">
+            <svg class="icon"><use href="#i-plus"/></svg> เพิ่มจุดติดตั้ง
+        </button>
+    </div>
+</header>
+
+<div class="callout">
+    <svg class="icon"><use href="#i-info"/></svg>
+    <div>
+        <strong>1 จุดติดตั้ง = กล้อง 1 ตัว + ปั๊มพ่นยา (ESP32) 1 ตัว</strong><br>
+        เมื่อกล้องของจุดไหนพบผักตบชวา จะสั่งเฉพาะปั๊มของจุดนั้น
+        ถ้ามีมากกว่า 1 จุด ต้องใส่ IP ของ ESP32 ทุกจุด และควรล็อก IP ไว้ในเราเตอร์ (DHCP reservation)
+        กล้องแต่ละตัวใช้พลังประมวลผลของ Raspberry Pi แยกกัน ยิ่งมีหลายจุด ความเร็วต่อกล้องจะลดลง
+    </div>
+</div>
+
+<div class="alerts" id="alerts"></div>
+
+<section class="station-grid" id="stations"></section>
+
+<dialog class="modal" id="cameraDialog">
+    <form id="cameraForm" method="dialog" novalidate>
+        <div class="modal-head">
+            <h2 id="dialogTitle">เพิ่มจุดติดตั้ง</h2>
+            <button class="btn btn-ghost btn-sm" type="button" id="closeDialog" aria-label="ปิด">
+                <svg class="icon"><use href="#i-x"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label for="fName">ชื่อจุดติดตั้ง <span class="req">*</span></label>
+                <input class="input" id="fName" name="name" maxlength="60" placeholder="เช่น คลองหน้าวัด จุดที่ 1" required>
+                <div class="error-text" data-error="name"></div>
+            </div>
+            <div class="field">
+                <label for="fUrl">ลิงก์กล้อง (RTSP) <span class="req">*</span></label>
+                <input class="input mono" id="fUrl" name="rtsp_url" placeholder="rtsp://admin:รหัสผ่าน@192.168.1.100:554/Streaming/Channels/102" required>
+                <div class="help">
+                    กล้อง Hikvision: <code>.../Channels/101</code> = ภาพชัด, <code>.../Channels/102</code> = ภาพย่อย (ประมวลผลเร็วกว่า แนะนำ)
+                </div>
+                <div class="error-text" data-error="rtsp_url"></div>
+            </div>
+            <div class="field">
+                <label for="fHost">IP ของ ESP32 (ปั๊มของจุดนี้)</label>
+                <input class="input mono" id="fHost" name="esp32_host" placeholder="192.168.1.50">
+                <div class="help">
+                    ดูได้จาก Serial Monitor ของ Arduino IDE ตอน ESP32 เริ่มทำงาน (บรรทัด <code>WiFi connected, IP: …</code>)
+                    — เว้นว่างได้เฉพาะเมื่อมีจุดติดตั้งเพียงจุดเดียว
+                </div>
+                <div class="error-text" data-error="esp32_host"></div>
+            </div>
+            <label class="check">
+                <input type="checkbox" id="fEnabled" name="enabled" checked>
+                เปิดใช้งานจุดนี้ (ปิดไว้ = หยุดกล้องและปั๊มของจุดนี้ชั่วคราว)
+            </label>
+            <div class="error-text" data-error="_"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn" type="button" id="cancelDialog">ยกเลิก</button>
+            <button class="btn btn-primary" type="submit" id="saveBtn">
+                <svg class="icon"><use href="#i-check"/></svg> บันทึก
+            </button>
+        </div>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let overview = null;
+    let editingId = null;
+    const dialog = $("#cameraDialog");
+    const form = $("#cameraForm");
+
+    function deviceRow(iconName, title, chipElement, detail) {
+        return h("div", { class: "device-row" },
+            h("span", { class: "device-icon" }, icon(iconName)),
+            h("div", {},
+                h("div", { class: "line" }, h("strong", { text: title }), chipElement),
+                h("div", { class: "detail", title: detail, text: detail }),
+            ),
+        );
+    }
+
+    function stationCard(camera) {
+        const cam = cameraState(camera.camera_status);
+        const pump = pumpState(camera.pump);
+        const host = camera.esp32_host ? `IP ${camera.esp32_host}` : "ยังไม่ได้ระบุ IP (ส่งถึงทุกเครื่องในวง WiFi)";
+        const duration = camera.pump && camera.pump.duration_s ? ` · พ่นครั้งละ ${camera.pump.duration_s} วินาที` : "";
+
+        return h("article", { class: "panel station-card" },
+            h("div", { class: "station-top" },
+                h("div", {}, h("h3", { text: camera.name }), h("small", { text: `รหัส ${camera.id}` })),
+                camera.enabled ? chip("ok", "เปิดใช้งาน") : chip("muted", "ปิดใช้งาน"),
+            ),
+            deviceRow("i-camera", "กล้อง", chip(cam.kind, cam.text), camera.rtsp_display),
+            deviceRow("i-drop", "ปั๊มพ่นยา (ESP32)", chip(pump.kind, pump.text), host + duration),
+            h("div", { class: "station-actions" },
+                h("button", {
+                    class: "btn btn-blue btn-sm", type: "button",
+                    disabled: !camera.enabled || (camera.pump && camera.pump.pump_on),
+                    onclick: () => testSpray(camera),
+                }, icon("i-zap"), "ทดสอบพ่น"),
+                h("button", { class: "btn btn-sm", type: "button", onclick: () => openDialog(camera) },
+                    icon("i-edit"), "แก้ไข"),
+                h("span", { class: "spacer" }),
+                h("button", { class: "btn btn-danger-soft btn-sm", type: "button", onclick: () => removeCamera(camera) },
+                    icon("i-trash"), "ลบ"),
+            ),
+        );
+    }
+
+    function render() {
+        const cards = overview.cameras.map(stationCard);
+        cards.push(h("button", { class: "add-card", type: "button", onclick: () => openDialog(null) },
+            icon("i-plus"), "เพิ่มจุดติดตั้ง"));
+        $("#stations").replaceChildren(...cards);
+    }
+
+    function setErrors(errors = {}) {
+        form.querySelectorAll("[data-error]").forEach((element) => {
+            element.textContent = errors[element.dataset.error] || "";
+        });
+        for (const input of form.querySelectorAll(".input")) {
+            input.classList.toggle("invalid", Boolean(errors[input.name]));
+        }
+    }
+
+    function openDialog(camera) {
+        editingId = camera ? camera.id : null;
+        $("#dialogTitle").textContent = camera ? `แก้ไข “${camera.name}”` : "เพิ่มจุดติดตั้ง";
+        $("#fName").value = camera ? camera.name : "";
+        $("#fUrl").value = camera ? camera.rtsp_url : "";
+        $("#fHost").value = camera ? camera.esp32_host : "";
+        $("#fEnabled").checked = camera ? camera.enabled : true;
+        setErrors();
+        dialog.showModal();
+        $("#fName").focus();
+    }
+
+    $("#addBtn").addEventListener("click", () => openDialog(null));
+    $("#closeDialog").addEventListener("click", () => dialog.close());
+    $("#cancelDialog").addEventListener("click", () => dialog.close());
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const body = {
+            name: $("#fName").value,
+            rtsp_url: $("#fUrl").value,
+            esp32_host: $("#fHost").value,
+            enabled: $("#fEnabled").checked,
+        };
+        const saveBtn = $("#saveBtn");
+        saveBtn.disabled = true;
+        saveBtn.lastChild.textContent = " กำลังบันทึก…";
+        try {
+            await api(editingId ? `/api/cameras/${encodeURIComponent(editingId)}` : "/api/cameras", {
+                method: editingId ? "PUT" : "POST", body,
+            });
+            dialog.close();
+            toast(editingId ? "บันทึกการแก้ไขแล้ว" : "เพิ่มจุดติดตั้งแล้ว — กำลังเชื่อมต่อกล้อง", "success");
+            refresh();
+        } catch (error) {
+            setErrors(error.data && error.data.errors ? error.data.errors : { _: error.message });
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.lastChild.textContent = " บันทึก";
+        }
+    });
+
+    async function testSpray(camera) {
+        if (!confirm(`ทดสอบปั๊มที่ “${camera.name}”?\nปั๊มจะทำงานจริง — ตรวจสอบว่าไม่มีคนอยู่ใกล้หัวพ่น`)) return;
+        try {
+            const result = await api(`/api/cameras/${encodeURIComponent(camera.id)}/spray`, { method: "POST" });
+            toast(result.message, "success");
+        } catch (error) {
+            toast(error.message, "error");
+        }
+    }
+
+    async function removeCamera(camera) {
+        if (!confirm(`ลบจุดติดตั้ง “${camera.name}”?\nประวัติการตรวจพบและการพ่นของจุดนี้จะยังอยู่ในระบบ`)) return;
+        try {
+            await api(`/api/cameras/${encodeURIComponent(camera.id)}`, { method: "DELETE" });
+            toast("ลบจุดติดตั้งแล้ว", "success");
+            refresh();
+        } catch (error) {
+            toast(error.message, "error");
+        }
+    }
+
+    async function refresh() {
+        try {
+            overview = await api("/api/overview");
+            render();
+        } catch (error) {
+            toast(error.message, "error");
+        }
+    }
+
+    pollOverview((data, error) => {
+        if (error) {
+            renderAlerts($("#alerts"), [{ level: "danger", text: error.message }]);
+            return;
+        }
+        overview = data;
+        renderAlerts($("#alerts"), data.alerts.filter((alert) => alert.level !== "warning"));
+        render();
+    }, 3000);
+</script>
+{% endblock %}

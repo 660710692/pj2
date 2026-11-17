@@ -1,96 +1,338 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block title %}ดูภาพสด{% endblock %}
 
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>Water Hyacinth Detection</title>
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-</head>
-
-<body>
-
-<div class="container">
-
-    <h1>🌿 Water Hyacinth Detection Dashboard</h1>
-
-    <div class="status-panel">
-
-        <div class="card">
-
-            <h3>Camera</h3>
-
-            <p id="camera">Connecting...</p>
-
-        </div>
-
-        <div class="card">
-
-            <h3>FPS</h3>
-
-            <p id="fps">0</p>
-
-        </div>
-
-        <div class="card">
-
-            <h3>Detected</h3>
-
-            <p id="detected">0</p>
-
-        </div>
-
-        <div class="card">
-
-            <h3>Timestamp</h3>
-
-            <p id="timestamp">-</p>
-
-        </div>
-
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>ดูภาพสด</h1>
+        <p>ภาพจากกล้องพร้อมผลการตรวจจับผักตบชวาแบบเรียลไทม์</p>
     </div>
-
-    <div class="video-container">
-
-        <img src="{{ url_for('video_feed') }}"
-             id="video">
-
+    <div class="header-actions">
+        <label class="toggle-card">
+            <span class="toggle-text">
+                <strong>พ่นอัตโนมัติ</strong>
+                <small id="autoText">กำลังโหลด…</small>
+            </span>
+            <span class="switch">
+                <input type="checkbox" id="autoToggle" aria-label="เปิด/ปิดการพ่นอัตโนมัติ">
+                <span class="track"></span>
+            </span>
+        </label>
+        <button class="btn btn-emergency" id="emergencyBtn" type="button">
+            <svg class="icon"><use href="#i-stop"/></svg> หยุดฉุกเฉิน
+        </button>
     </div>
+</header>
 
-</div>
+<div class="alerts" id="alerts"></div>
 
+<section class="metrics" aria-label="สรุปวันนี้">
+    <article class="metric">
+        <span class="metric-icon green"><svg class="icon"><use href="#i-leaf"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">พบผักตบชวาวันนี้</div>
+            <div class="metric-value" id="todayDetections">-</div>
+            <div class="metric-sub">กลุ่ม · นับตั้งแต่ 00:00 น.</div>
+        </div>
+    </article>
+    <article class="metric">
+        <span class="metric-icon blue"><svg class="icon"><use href="#i-drop"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">พ่นยาวันนี้</div>
+            <div class="metric-value" id="todaySprays">-</div>
+            <div class="metric-sub">ครั้งที่ปั๊มทำงานจริง</div>
+        </div>
+    </article>
+    <article class="metric">
+        <span class="metric-icon amber"><svg class="icon"><use href="#i-clock"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">พ่นครั้งล่าสุด</div>
+            <div class="metric-value small" id="lastSpray">-</div>
+            <div class="metric-sub" id="lastSprayAgo">ยังไม่มีการพ่น</div>
+        </div>
+    </article>
+    <article class="metric">
+        <span class="metric-icon gray"><svg class="icon"><use href="#i-devices"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">อุปกรณ์ออนไลน์</div>
+            <div class="metric-value small" id="onlineDevices">-</div>
+            <div class="metric-sub" id="onlineDetail">ออนไลน์ / ทั้งหมด</div>
+        </div>
+    </article>
+</section>
+
+<div class="tabs" id="tabs" role="tablist" aria-label="เลือกจุดติดตั้ง" hidden></div>
+
+<section class="live-grid">
+    <article class="panel panel-pad">
+        <div class="panel-head">
+            <div>
+                <h2 id="stationName">-</h2>
+                <p>กรอบบนภาพ = ผักตบชวาที่ระบบตรวจพบ</p>
+            </div>
+            <span id="cameraChip"></span>
+        </div>
+        <div class="video-stage">
+            <img id="video" alt="ภาพสดจากกล้องพร้อมกรอบตรวจจับ">
+            <div class="video-overlay">
+                <span class="live-badge"><span></span>LIVE</span>
+                <span class="video-time" id="videoTime" hidden></span>
+            </div>
+            <div class="video-message" id="videoMessage">กำลังรอภาพจากกล้อง…</div>
+        </div>
+        <div class="video-caption">
+            <span id="fpsText">ความเร็วประมวลผล -</span>
+            <span>ป้ายบนกรอบ: รหัสติดตาม · ชนิด · ความมั่นใจ</span>
+        </div>
+    </article>
+
+    <div class="stack">
+        <article class="panel panel-pad">
+            <div class="panel-head">
+                <div class="panel-title-icon">
+                    <svg class="icon"><use href="#i-drop"/></svg>
+                    <h2>ปั๊มพ่นยาของจุดนี้</h2>
+                </div>
+                <span class="subtle mono" id="pumpHost"></span>
+            </div>
+            <div class="pump-state" id="pumpState">
+                <span class="pump-icon"><svg class="icon"><use href="#i-drop"/></svg></span>
+                <div><strong>-</strong><small>-</small></div>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-blue btn-lg" id="sprayBtn" type="button">
+                    <svg class="icon"><use href="#i-drop"/></svg> สั่งพ่นทันที
+                </button>
+                <button class="btn btn-danger-soft btn-lg" id="stopBtn" type="button">
+                    <svg class="icon"><use href="#i-stop"/></svg> หยุดปั๊ม
+                </button>
+            </div>
+        </article>
+
+        <article class="panel panel-pad">
+            <div class="panel-head">
+                <div class="panel-title-icon">
+                    <svg class="icon"><use href="#i-search"/></svg>
+                    <h2>ผักตบที่เห็นในภาพตอนนี้</h2>
+                </div>
+            </div>
+            <div class="big-count"><strong id="nowCount">0</strong><span>กลุ่ม</span></div>
+            <div class="object-list" id="objectList"></div>
+        </article>
+
+        <article class="panel panel-pad">
+            <div class="panel-head">
+                <div class="panel-title-icon">
+                    <svg class="icon"><use href="#i-clock"/></svg>
+                    <h2>เหตุการณ์ล่าสุดของจุดนี้</h2>
+                </div>
+                <a href="/admin" class="btn btn-ghost btn-sm">ดูทั้งหมด</a>
+            </div>
+            <div class="events" id="events"></div>
+        </article>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
 <script>
+    let overview = null;
+    let stats = null;
+    let selectedId = new URLSearchParams(location.search).get("cam");
+    try { selectedId = selectedId || localStorage.getItem("liveCamera"); } catch { /* ไม่มี storage */ }
 
-function updateStatus(){
+    const autoToggle = $("#autoToggle");
+    bindAutoSprayToggle(autoToggle, $("#autoText"));
+    $("#emergencyBtn").addEventListener("click", emergencyStop);
 
-    fetch("/status")
+    function activeCameras() {
+        return overview ? overview.cameras.filter((camera) => camera.enabled) : [];
+    }
 
-    .then(response => response.json())
+    function selectedCamera() {
+        return activeCameras().find((camera) => camera.id === selectedId) || null;
+    }
 
-    .then(data => {
+    function selectCamera(id) {
+        selectedId = id;
+        try { localStorage.setItem("liveCamera", id); } catch { /* ไม่มี storage */ }
+        const url = new URL(location.href);
+        url.searchParams.set("cam", id);
+        history.replaceState(null, "", url);
+        render();
+    }
 
-        document.getElementById("camera").innerHTML=data.camera;
+    function renderTabs(cameras) {
+        const tabs = $("#tabs");
+        tabs.hidden = cameras.length <= 1;
+        if (tabs.hidden) return;
+        tabs.replaceChildren(...cameras.map((camera) => {
+            const state = cameraState(camera.camera_status);
+            const bad = state.kind !== "ok" || (camera.pump && camera.pump.online === false);
+            return h("button", {
+                class: `tab ${camera.id === selectedId ? "active" : ""}`,
+                type: "button", role: "tab",
+                "aria-selected": camera.id === selectedId ? "true" : "false",
+                style: bad && camera.id !== selectedId ? "color: var(--red)" : null,
+                onclick: () => selectCamera(camera.id),
+            }, h("span", { class: "dot" }), camera.name);
+        }));
+    }
 
-        document.getElementById("fps").innerHTML=data.fps;
+    function renderStation(camera) {
+        $("#stationName").textContent = camera ? camera.name : "ยังไม่มีกล้องที่เปิดใช้งาน";
+        const camState = cameraState(camera ? camera.camera_status : "Disabled");
+        $("#cameraChip").replaceChildren(chip(camState.kind, `กล้อง: ${camState.text}`));
+        $("#fpsText").textContent = camera && camera.fps
+            ? `ความเร็วประมวลผล ${camera.fps} ภาพ/วินาที`
+            : "ความเร็วประมวลผล -";
+        const time = $("#videoTime");
+        time.hidden = !(camera && camera.timestamp);
+        time.textContent = camera ? camera.timestamp : "";
 
-        document.getElementById("detected").innerHTML=data.detected;
+        // ปั๊ม
+        const pump = camera ? camera.pump : null;
+        const state = pumpState(pump);
+        const box = $("#pumpState");
+        box.className = `pump-state ${state.box}`;
+        box.replaceChildren(
+            h("span", { class: "pump-icon" }, icon(state.box === "danger" ? "i-alert" : "i-drop")),
+            h("div", {}, h("strong", { text: state.text }), h("small", { text: state.detail })),
+        );
+        $("#pumpHost").textContent = pump ? (pump.broadcast ? "ส่งทุกเครื่อง" : `ESP32 ${pump.host}`) : "";
+        $("#sprayBtn").disabled = !camera || !pump || pump.pump_on;
+        $("#stopBtn").disabled = !camera || !pump;
 
-        document.getElementById("timestamp").innerHTML=data.timestamp;
+        // วัตถุในภาพ
+        const objects = camera ? camera.objects : [];
+        $("#nowCount").textContent = objects.length;
+        const list = $("#objectList");
+        if (objects.length === 0) {
+            list.replaceChildren(h("div", { class: "empty" },
+                icon("i-search"), h("strong", { text: "ยังไม่พบผักตบชวาในภาพ" }),
+                h("span", { text: "เมื่อระบบตรวจพบ จะแสดงที่นี่" })));
+        } else {
+            list.replaceChildren(...objects.map((object) => h("div", { class: "object-item" },
+                h("span", { class: "leaf" }, icon("i-leaf")),
+                h("span", { class: "grow", text: `ผักตบชวา #${object.id}` }),
+                h("span", { class: "bar", title: "ความมั่นใจ" },
+                    h("span", { style: `width:${Math.round(object.confidence * 100)}%` })),
+                h("span", { class: "muted", text: percent(object.confidence) }),
+            )));
+        }
+    }
 
+    function renderEvents() {
+        const container = $("#events");
+        if (!stats || !selectedId) {
+            container.replaceChildren();
+            return;
+        }
+        const events = mergeEvents(stats, selectedId, 8);
+        container.replaceChildren(...(events.length
+            ? events.map(eventRow)
+            : [h("div", { class: "empty" }, h("strong", { text: "ยังไม่มีเหตุการณ์" }),
+                h("span", { text: "การตรวจพบและการพ่นของจุดนี้จะแสดงที่นี่" }))]));
+    }
+
+    function render() {
+        if (!overview) return;
+        const cameras = activeCameras();
+        if (!cameras.some((camera) => camera.id === selectedId)) {
+            selectedId = cameras.length ? cameras[0].id : null;
+        }
+        renderAlerts($("#alerts"), overview.alerts);
+        showAutoSpray(autoToggle, $("#autoText"), overview.auto_spray);
+        renderTabs(cameras);
+        renderStation(selectedCamera());
+        renderEvents();
+
+        const counts = overview.counts;
+        $("#onlineDevices").textContent =
+            `กล้อง ${counts.cameras_online}/${counts.cameras_total} · ปั๊ม ${counts.pumps_online}/${counts.cameras_total}`;
+        $("#onlineDetail").textContent = counts.cameras_online === counts.cameras_total && counts.pumps_online === counts.cameras_total
+            ? "ทุกอุปกรณ์ทำงานปกติ" : "มีอุปกรณ์ที่ต้องตรวจสอบ";
+    }
+
+    pollOverview((data, error) => {
+        if (error) {
+            renderAlerts($("#alerts"), [{ level: "danger", text: error.message }]);
+            return;
+        }
+        overview = data;
+        render();
+    }, 1000);
+
+    pollStats((data) => {
+        if (!data) return;
+        stats = data;
+        $("#todayDetections").textContent = formatNumber(data.today.detections);
+        $("#todaySprays").textContent = formatNumber(data.today.sprays);
+        $("#lastSpray").textContent = data.last_spray ? data.last_spray.time : "-";
+        $("#lastSprayAgo").textContent = data.last_spray
+            ? relativeTime(data.last_spray.epoch) : "ยังไม่มีการพ่น";
+        renderEvents();
+    }, 4000);
+
+    // ปุ่มสั่งพ่น / หยุด
+    $("#sprayBtn").addEventListener("click", async () => {
+        const camera = selectedCamera();
+        if (!camera) return;
+        if (!confirm(`สั่งพ่นยาที่ “${camera.name}” ทันที?\nตรวจสอบว่าไม่มีคนอยู่ใกล้หัวพ่น`)) return;
+        try {
+            const result = await api(`/api/cameras/${encodeURIComponent(camera.id)}/spray`, { method: "POST" });
+            toast(result.message, "success");
+        } catch (error) {
+            toast(error.message, "error");
+        }
     });
 
-}
+    $("#stopBtn").addEventListener("click", async () => {
+        const camera = selectedCamera();
+        if (!camera) return;
+        try {
+            const result = await api(`/api/cameras/${encodeURIComponent(camera.id)}/stop`, { method: "POST" });
+            toast(result.message, "success");
+        } catch (error) {
+            toast(error.message, "error");
+        }
+    });
 
-setInterval(updateStatus,500);
+    // ภาพจากกล้องที่เลือก (ดึงทีละภาพ ไม่ค้างเมื่อสลับกล้อง)
+    const video = $("#video");
+    const videoMessage = $("#videoMessage");
+    let previousUrl = null;
 
+    async function updateFrame() {
+        try {
+            if (!selectedId) {
+                videoMessage.textContent = overview ? "ยังไม่มีกล้องที่เปิดใช้งาน — เพิ่มได้ที่หน้า “อุปกรณ์”" : "กำลังโหลด…";
+                videoMessage.hidden = false;
+                video.removeAttribute("src");
+                return;
+            }
+            const response = await fetch(`/video_frame/${encodeURIComponent(selectedId)}`, { cache: "no-store" });
+            if (!response.ok) throw new Error("ยังไม่มีภาพจากกล้องนี้");
+            const url = URL.createObjectURL(await response.blob());
+            const loaded = await new Promise((resolve) => {
+                video.onload = () => resolve(true);
+                video.onerror = () => resolve(false);
+                video.src = url;
+            });
+            if (!loaded) {
+                URL.revokeObjectURL(url);
+                throw new Error("แสดงภาพไม่ได้");
+            }
+            if (previousUrl) URL.revokeObjectURL(previousUrl);
+            previousUrl = url;
+            videoMessage.hidden = true;
+        } catch (error) {
+            videoMessage.textContent = error.message;
+            videoMessage.hidden = false;
+        } finally {
+            setTimeout(updateFrame, 200);
+        }
+    }
+    updateFrame();
 </script>
-
-</body>
-
-</html>
+{% endblock %}

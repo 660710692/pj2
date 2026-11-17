@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}ตั้งค่า{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>ตั้งค่า</h1>
+        <p>ปรับเงื่อนไขการพ่นยาและการตรวจจับ — มีผลกับทุกจุดทันที ไม่ต้องรีสตาร์ทระบบ</p>
+    </div>
+</header>
+
+<div class="settings-grid">
+    <div class="stack">
+        <section class="panel panel-pad">
+            <div class="panel-head">
+                <div>
+                    <h2>การพ่นอัตโนมัติ</h2>
+                    <p>เปลี่ยนทันทีเมื่อกดสวิตช์</p>
+                </div>
+            </div>
+            <div class="setting" style="padding-top: 4px">
+                <div class="setting-text">
+                    <strong>พ่นยาอัตโนมัติเมื่อพบผักตบชวา</strong>
+                    <p id="autoText">กำลังโหลด…</p>
+                </div>
+                <div class="setting-control">
+                    <label class="switch">
+                        <input type="checkbox" id="autoToggle" aria-label="เปิด/ปิดการพ่นอัตโนมัติ">
+                        <span class="track"></span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <form class="panel panel-pad" id="settingsForm" novalidate>
+            <div class="panel-head">
+                <div>
+                    <h2>เงื่อนไขการพ่นยา</h2>
+                    <p>กด &ldquo;บันทึกการตั้งค่า&rdquo; เพื่อใช้ค่าใหม่</p>
+                </div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-text">
+                    <strong>ระยะเวลาพ่นต่อครั้ง</strong>
+                    <p>ปั๊มจะทำงานนานเท่านี้ทุกครั้งที่สั่งพ่น (ทั้งพ่นอัตโนมัติและกดสั่งจากหน้าเว็บ)
+                        ตั้งได้ 0.5 วินาที ถึง 600 วินาที (10 นาที)
+                        <span class="recommend" data-default="spray_seconds"></span></p>
+                </div>
+                <div class="setting-control">
+                    <input class="input input-sm" type="number" id="spray_seconds" min="0.5" max="600" step="0.5"> วินาที
+                </div>
+                <div class="error-text" data-error="spray_seconds"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-text">
+                    <strong>ความมั่นใจขั้นต่ำที่จะพ่น</strong>
+                    <p>ระบบจะพ่นเมื่อมั่นใจว่าเป็นผักตบชวาอย่างน้อยเท่านี้
+                        ค่าสูง = พ่นผิดน้อยลง แต่อาจพลาดบางกอ
+                        <span class="recommend" data-default="spray_confidence"></span></p>
+                </div>
+                <div class="setting-control">
+                    <input class="input input-sm" type="number" id="spray_confidence" min="5" max="95" step="1"> %
+                </div>
+                <div class="error-text" data-error="spray_confidence"></div>
+            </div>
+
+            <div class="setting stacked">
+                <div class="setting-text">
+                    <strong>ต้องเห็นซ้ำก่อนพ่น</strong>
+                    <p>กันการพ่นผิดจากภาพหลอกชั่วขณะ เช่น แสงสะท้อนหรือคลื่น
+                        ระบบจะพ่นเมื่อเห็นผักตบกอเดิมครบตามจำนวนครั้งในช่วงภาพล่าสุด
+                        (ถ้าความเร็วประมวลผลต่ำกว่า 5 ภาพ/วินาที แนะนำ 3 จาก 5)
+                        <span class="recommend" data-default="hits"></span></p>
+                </div>
+                <div class="setting-control">
+                    เห็น <input class="input input-sm" type="number" id="spray_min_hits" min="1" max="30" step="1">
+                    ครั้ง จาก <input class="input input-sm" type="number" id="spray_window" min="1" max="30" step="1"> ภาพ
+                </div>
+                <div class="error-text" data-error="spray_min_hits"></div>
+                <div class="error-text" data-error="spray_window"></div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-text">
+                    <strong>เว้นระยะระหว่างการพ่น</strong>
+                    <p>หลังสั่งพ่น ระบบจะรออย่างน้อยเท่านี้ก่อนพ่นครั้งถัดไปที่จุดเดิม (นับจากเริ่มพ่น)
+                        ถ้าน้อยกว่าเวลาพ่นของปั๊ม จะรอจนปั๊มหยุดก่อนเสมอ
+                        <span class="recommend" data-default="cooldown_seconds"></span></p>
+                </div>
+                <div class="setting-control">
+                    <input class="input input-sm" type="number" id="cooldown_seconds" min="0" max="3600" step="1"> วินาที
+                </div>
+                <div class="error-text" data-error="cooldown_seconds"></div>
+            </div>
+
+            <div class="panel-head" style="margin-top: 14px">
+                <div>
+                    <h2>การตรวจจับ</h2>
+                </div>
+            </div>
+
+            <div class="setting">
+                <div class="setting-text">
+                    <strong>ความมั่นใจขั้นต่ำที่จะแสดงกรอบ</strong>
+                    <p>ใช้แสดงกรอบบนภาพและติดตามวัตถุ ควรต่ำกว่าค่าการพ่นเล็กน้อย
+                        <span class="recommend" data-default="detect_confidence"></span></p>
+                </div>
+                <div class="setting-control">
+                    <input class="input input-sm" type="number" id="detect_confidence" min="5" max="95" step="1"> %
+                </div>
+                <div class="error-text" data-error="detect_confidence"></div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit" id="saveBtn">
+                    <svg class="icon"><use href="#i-check"/></svg> บันทึกการตั้งค่า
+                </button>
+                <button class="btn btn-ghost" type="button" id="resetBtn">คืนค่าแนะนำ</button>
+            </div>
+        </form>
+    </div>
+
+    <aside class="stack">
+        <section class="panel panel-pad">
+            <div class="panel-head">
+                <div class="panel-title-icon">
+                    <svg class="icon"><use href="#i-info"/></svg>
+                    <h2>ข้อมูลระบบ</h2>
+                </div>
+            </div>
+            <div class="kv">
+                <div class="kv-row"><span><svg class="icon"><use href="#i-clock"/></svg>เวลาของระบบ</span><strong id="sysTime">-</strong></div>
+                <div class="kv-row"><span><svg class="icon"><use href="#i-devices"/></svg>จุดติดตั้ง</span><strong id="sysStations">-</strong></div>
+                <div class="kv-row"><span><svg class="icon"><use href="#i-search"/></svg>โมเดล</span><strong class="mono" id="sysModel">-</strong></div>
+            </div>
+            <p class="help" style="margin-top: 10px">
+                ถ้าเวลาไม่ตรงกับนาฬิกาจริง ให้ตรวจเวลาของ Raspberry Pi ด้วยคำสั่ง <code>timedatectl</code>
+                (Pi ต้องต่ออินเทอร์เน็ตอย่างน้อยครั้งแรกเพื่อตั้งเวลา)
+            </p>
+        </section>
+
+        <section class="panel panel-pad">
+            <div class="panel-head">
+                <div class="panel-title-icon">
+                    <svg class="icon"><use href="#i-drop"/></svg>
+                    <h2>ระยะเวลาพ่นจริงของแต่ละปั๊ม</h2>
+                </div>
+            </div>
+            <div class="kv" id="pumpDurations"></div>
+            <p class="help" style="margin-top: 10px">
+                ค่าที่ปั๊มรายงานกลับมาหลังพ่นครั้งล่าสุด ควรตรงกับ &ldquo;ระยะเวลาพ่นต่อครั้ง&rdquo;
+                ถ้าไม่ตรง แปลว่า ESP32 ตัวนั้นยังใช้ <code>esp32_udp_pump.ino</code> เวอร์ชันเก่า
+                ซึ่งตั้งเวลาจากหน้าเว็บไม่ได้
+            </p>
+        </section>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const PERCENT_FIELDS = ["spray_confidence", "detect_confidence"];
+    const NUMBER_FIELDS = ["spray_seconds", "spray_min_hits", "spray_window", "cooldown_seconds"];
+    let defaults = null;
+
+    const autoToggle = $("#autoToggle");
+    bindAutoSprayToggle(autoToggle, $("#autoText"));
+
+    function fill(settings) {
+        for (const key of PERCENT_FIELDS) $(`#${key}`).value = Math.round(settings[key] * 100);
+        for (const key of NUMBER_FIELDS) $(`#${key}`).value = settings[key];
+    }
+
+    function setErrors(errors = {}) {
+        document.querySelectorAll("[data-error]").forEach((element) => {
+            element.textContent = errors[element.dataset.error] || "";
+        });
+        for (const key of [...PERCENT_FIELDS, ...NUMBER_FIELDS]) {
+            $(`#${key}`).classList.toggle("invalid", Boolean(errors[key]));
+        }
+    }
+
+    async function load() {
+        try {
+            const data = await api("/api/settings");
+            defaults = data.defaults;
+            fill(data.settings);
+            showAutoSpray(autoToggle, $("#autoText"), data.settings.auto_spray);
+            const recommend = {
+                spray_confidence: `ค่าแนะนำ ${percent(defaults.spray_confidence)}`,
+                detect_confidence: `ค่าแนะนำ ${percent(defaults.detect_confidence)}`,
+                hits: `ค่าแนะนำ ${defaults.spray_min_hits} จาก ${defaults.spray_window}`,
+                cooldown_seconds: `ค่าแนะนำ ${defaults.cooldown_seconds} วินาที`,
+                spray_seconds: `ค่าเริ่มต้น ${defaults.spray_seconds} วินาที`,
+            };
+            document.querySelectorAll("[data-default]").forEach((element) => {
+                element.textContent = `· ${recommend[element.dataset.default]}`;
+            });
+        } catch (error) {
+            toast(error.message, "error");
+        }
+    }
+
+    $("#settingsForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const body = {};
+        for (const key of PERCENT_FIELDS) body[key] = Number($(`#${key}`).value) / 100;
+        for (const key of NUMBER_FIELDS) body[key] = Number($(`#${key}`).value);
+        const button = $("#saveBtn");
+        button.disabled = true;
+        try {
+            const result = await api("/api/settings", { method: "POST", body });
+            fill(result.settings);
+            setErrors();
+            toast("บันทึกการตั้งค่าแล้ว — มีผลกับทุกจุดทันที", "success");
+        } catch (error) {
+            const errors = error.data && error.data.errors ? error.data.errors : {};
+            for (const key of PERCENT_FIELDS) {
+                if (errors[key] && errors[key].startsWith("ต้องอยู่ระหว่าง")) errors[key] = "ต้องอยู่ระหว่าง 5% ถึง 95%";
+            }
+            setErrors(errors);
+            toast(Object.keys(errors).length ? "ยังบันทึกไม่ได้ — กรุณาแก้ค่าที่ขึ้นสีแดง" : error.message, "error");
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    $("#resetBtn").addEventListener("click", () => {
+        if (!defaults) return;
+        fill(defaults);
+        setErrors();
+        toast("ใส่ค่าแนะนำแล้ว — กด “บันทึกการตั้งค่า” เพื่อใช้งาน");
+    });
+
+    pollOverview((data) => {
+        if (!data) return;
+        $("#sysTime").textContent = data.server_time;
+        const enabled = data.cameras.filter((camera) => camera.enabled).length;
+        $("#sysStations").textContent = `${data.cameras.length} จุด (เปิดใช้งาน ${enabled})`;
+        $("#sysModel").textContent = data.model_path;
+        if (!autoToggle.disabled) showAutoSpray(autoToggle, $("#autoText"), data.auto_spray);
+
+        const rows = data.cameras.map((camera) => {
+            const pump = camera.pump;
+            let value;
+            if (!camera.enabled) value = h("span", { class: "subtle", text: "ปิดใช้งาน" });
+            else if (!pump || !pump.duration_s) value = h("span", { class: "subtle", text: "ยังไม่เคยพ่น" });
+            else if (pump.duration_mismatch) value = chip("warn", `${pump.duration_s} วินาที (sketch เก่า)`);
+            else value = h("strong", { text: `${pump.duration_s} วินาที` });
+            return h("div", { class: "kv-row" }, h("span", { text: camera.name }), value);
+        });
+        $("#pumpDurations").replaceChildren(...(rows.length ? rows
+            : [h("div", { class: "empty" }, h("span", { text: "ยังไม่มีจุดติดตั้ง" }))]));
+    }, 2000);
+
+    load();
+</script>
+{% endblock %}

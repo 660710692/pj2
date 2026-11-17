@@ -1,490 +1,276 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block title %}แดชบอร์ด{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block content %}
+<header class="page-header">
+    <div>
+        <h1>แดชบอร์ด</h1>
+        <p>สรุปการตรวจพบ การพ่นยา และสถานะอุปกรณ์ทุกจุด</p>
+    </div>
+    <div class="header-actions">
+        <a class="btn" href="/admin/export/detections.csv">
+            <svg class="icon"><use href="#i-download"/></svg> ประวัติการตรวจพบ (Excel/CSV)
+        </a>
+        <a class="btn" href="/admin/export/sprays.csv">
+            <svg class="icon"><use href="#i-download"/></svg> ประวัติการพ่น (Excel/CSV)
+        </a>
+    </div>
+</header>
 
-    <title>Water Hyacinth - Admin Dashboard</title>
+<div class="alerts" id="alerts"></div>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
-</head>
+<section class="metrics" aria-label="สรุปวันนี้">
+    <article class="metric">
+        <span class="metric-icon green"><svg class="icon"><use href="#i-leaf"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">พบผักตบชวาวันนี้</div>
+            <div class="metric-value" id="todayDetections">-</div>
+            <div class="metric-sub" id="totalDetections">ทั้งหมด -</div>
+        </div>
+    </article>
+    <article class="metric">
+        <span class="metric-icon blue"><svg class="icon"><use href="#i-drop"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">พ่นยาวันนี้</div>
+            <div class="metric-value" id="todaySprays">-</div>
+            <div class="metric-sub" id="totalSprays">ทั้งหมด -</div>
+        </div>
+    </article>
+    <article class="metric">
+        <span class="metric-icon amber"><svg class="icon"><use href="#i-clock"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">พ่นครั้งล่าสุด</div>
+            <div class="metric-value small" id="lastSpray">-</div>
+            <div class="metric-sub" id="lastSprayAgo">ยังไม่มีการพ่น</div>
+        </div>
+    </article>
+    <article class="metric">
+        <span class="metric-icon gray"><svg class="icon"><use href="#i-devices"/></svg></span>
+        <div class="metric-body">
+            <div class="metric-label">อุปกรณ์ออนไลน์</div>
+            <div class="metric-value small" id="onlineDevices">-</div>
+            <div class="metric-sub" id="onlineDetail">ออนไลน์ / ทั้งหมด</div>
+        </div>
+    </article>
+</section>
 
-<body>
+<section class="panel panel-pad section">
+    <div class="panel-head">
+        <div>
+            <h2>24 ชั่วโมงล่าสุด</h2>
+            <p>จำนวนผักตบชวาที่ตรวจพบ และจำนวนครั้งที่พ่นยา รายชั่วโมง (ทุกจุดรวมกัน)</p>
+        </div>
+        <div class="chart-legend">
+            <span><i style="background: var(--green-600)"></i>ตรวจพบ</span>
+            <span><i style="background: var(--blue)"></i>พ่นยา</span>
+        </div>
+    </div>
+    <svg class="chart" id="chart" viewBox="0 0 960 250" role="img" aria-label="กราฟรายชั่วโมง"></svg>
+</section>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
+<section class="panel panel-pad section">
+    <div class="panel-head">
+        <div>
+            <h2>สถานะแต่ละจุดติดตั้ง</h2>
+            <p>อัปเดตทุก 3 วินาที · แก้ไขอุปกรณ์ได้ที่หน้า &ldquo;อุปกรณ์&rdquo;</p>
+        </div>
+        <a href="/admin/devices" class="btn btn-sm">จัดการอุปกรณ์</a>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>จุดติดตั้ง</th>
+                    <th>กล้อง</th>
+                    <th>ปั๊มพ่นยา</th>
+                    <th>ความเร็วประมวลผล</th>
+                    <th>พบวันนี้</th>
+                    <th>พ่นวันนี้</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="stationRows">
+                <tr><td colspan="7" class="empty-cell">กำลังโหลด…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 
-        <div class="logo">
-            <div class="logo-icon">🌿</div>
+<section class="grid-2">
+    <article class="panel panel-pad">
+        <div class="panel-head">
             <div>
-                <h2>Water Hyacinth</h2>
-                <span>Management System</span>
+                <h2>การตรวจพบล่าสุด</h2>
+                <p>นับ 1 ครั้งต่อผักตบ 1 กลุ่มที่ระบบติดตาม</p>
             </div>
         </div>
-
-        <nav>
-
-            <a href="/" class="nav-item">
-                <span>📹</span>
-                Live Detection
-            </a>
-
-            <a href="/admin" class="nav-item active">
-                <span>📊</span>
-                Admin Dashboard
-            </a>
-
-        </nav>
-
-        <div class="system-status">
-            <span class="status-dot"></span>
-            System Online
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>เวลา</th><th>จุดติดตั้ง</th><th>รหัส</th><th>ความมั่นใจ</th></tr></thead>
+                <tbody id="detectionRows"></tbody>
+            </table>
         </div>
-
-    </aside>
-
-
-    <!-- Main Content -->
-    <main class="main">
-
-        <header class="topbar">
-
+    </article>
+    <article class="panel panel-pad">
+        <div class="panel-head">
             <div>
-                <h1>Admin Dashboard</h1>
-                <p>System overview and monitoring</p>
+                <h2>การพ่นล่าสุด</h2>
+                <p>รวมการพ่นอัตโนมัติ การสั่งจากหน้าเว็บ และการสั่งหยุด</p>
             </div>
-
-            <div class="datetime">
-                <strong id="currentDate">--</strong>
-                <span id="currentTime">--:--:--</span>
-            </div>
-
-        </header>
-
-
-        <!-- Summary Cards -->
-        <section class="cards">
-
-            <div class="card">
-                <div class="card-icon">🌿</div>
-
-                <div>
-                    <p>Detection Today</p>
-                    <h2>127</h2>
-                    <span class="positive">↑ 12% from yesterday</span>
-                </div>
-            </div>
-
-
-            <div class="card">
-                <div class="card-icon">🎯</div>
-
-                <div>
-                    <p>Average Confidence</p>
-                    <h2>84.6%</h2>
-                    <span class="positive">Detection Quality: Good</span>
-                </div>
-            </div>
-
-
-            <div class="card">
-                <div class="card-icon">💧</div>
-
-                <div>
-                    <p>Chemical Level</p>
-                    <h2>78%</h2>
-                    <span class="positive">Normal</span>
-                </div>
-            </div>
-
-
-            <div class="card">
-                <div class="card-icon">🚿</div>
-
-                <div>
-                    <p>Today's Sprays</p>
-                    <h2>12</h2>
-                    <span>1.1 L Used</span>
-                </div>
-            </div>
-
-        </section>
-
-
-        <!-- Main Grid -->
-        <section class="dashboard-grid">
-
-
-            <!-- Detection Summary -->
-            <div class="panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Detection Summary</h3>
-                        <p>Water hyacinth detection today</p>
-                    </div>
-                </div>
-
-                <div class="stats">
-
-                    <div class="stat-row">
-                        <span>Total Detection</span>
-                        <strong>127</strong>
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Average Confidence</span>
-                        <strong>84.6%</strong>
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Highest Confidence</span>
-                        <strong>98.2%</strong>
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Detection Threshold</span>
-                        <strong>60%</strong>
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- Device Status -->
-            <div class="panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Device Status</h3>
-                        <p>Connected system devices</p>
-                    </div>
-                </div>
-
-
-                <div class="device">
-
-                    <div class="device-info">
-                        <div class="device-icon">🖥️</div>
-
-                        <div>
-                            <strong>Raspberry Pi</strong>
-                            <span>Edge Computing Device</span>
-                        </div>
-                    </div>
-
-                    <span class="badge online">Online</span>
-
-                </div>
-
-
-                <div class="device">
-
-                    <div class="device-info">
-                        <div class="device-icon">📷</div>
-
-                        <div>
-                            <strong>IP Camera</strong>
-                            <span>640 × 360 / 25 FPS</span>
-                        </div>
-                    </div>
-
-                    <span class="badge online">Connected</span>
-
-                </div>
-
-
-                <div class="device">
-
-                    <div class="device-info">
-                        <div class="device-icon">🚿</div>
-
-                        <div>
-                            <strong>Spray System</strong>
-                            <span>Automatic Spraying</span>
-                        </div>
-                    </div>
-
-                    <span class="badge standby">Standby</span>
-
-                </div>
-
-            </div>
-
-
-            <!-- Chemical Status -->
-            <div class="panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Chemical Status</h3>
-                        <p>Spraying chemical information</p>
-                    </div>
-                </div>
-
-
-                <div class="chemical-level">
-
-                    <div class="chemical-value">
-                        <strong>78%</strong>
-                        <span>3.9 L remaining</span>
-                    </div>
-
-                    <div class="progress">
-                        <div class="progress-bar" style="width: 78%;"></div>
-                    </div>
-
-                    <p class="chemical-normal">
-                        ● Chemical level is normal
-                    </p>
-
-                </div>
-
-
-                <div class="spray-summary">
-
-                    <div>
-                        <span>Today's Sprays</span>
-                        <strong>12</strong>
-                    </div>
-
-                    <div>
-                        <span>Total Used</span>
-                        <strong>1.1 L</strong>
-                    </div>
-
-                    <div>
-                        <span>Last Spray</span>
-                        <strong>14:32</strong>
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- System Information -->
-            <div class="panel">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>System Information</h3>
-                        <p>Edge device resources</p>
-                    </div>
-                </div>
-
-
-                <div class="resource">
-
-                    <div class="resource-label">
-                        <span>CPU Usage</span>
-                        <strong>42%</strong>
-                    </div>
-
-                    <div class="progress">
-                        <div class="progress-bar" style="width: 42%;"></div>
-                    </div>
-
-                </div>
-
-
-                <div class="resource">
-
-                    <div class="resource-label">
-                        <span>Memory Usage</span>
-                        <strong>58%</strong>
-                    </div>
-
-                    <div class="progress">
-                        <div class="progress-bar" style="width: 58%;"></div>
-                    </div>
-
-                </div>
-
-
-                <div class="resource">
-
-                    <div class="resource-label">
-                        <span>Temperature</span>
-                        <strong>54°C</strong>
-                    </div>
-
-                    <div class="progress">
-                        <div class="progress-bar" style="width: 54%;"></div>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- Spray History -->
-        <section class="panel history-panel">
-
-            <div class="panel-header">
-
-                <div>
-                    <h3>Spray History</h3>
-                    <p>Recent automatic spraying operations</p>
-                </div>
-
-                <button class="view-all">View All</button>
-
-            </div>
-
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Detection</th>
-                            <th>Confidence</th>
-                            <th>Chemical Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        <tr>
-                            <td>14:32:18</td>
-                            <td>3 plants</td>
-                            <td>91%</td>
-                            <td>120 ml</td>
-                            <td><span class="badge success">Success</span></td>
-                        </tr>
-
-                        <tr>
-                            <td>13:47:05</td>
-                            <td>2 plants</td>
-                            <td>86%</td>
-                            <td>80 ml</td>
-                            <td><span class="badge success">Success</span></td>
-                        </tr>
-
-                        <tr>
-                            <td>12:21:43</td>
-                            <td>5 plants</td>
-                            <td>94%</td>
-                            <td>180 ml</td>
-                            <td><span class="badge success">Success</span></td>
-                        </tr>
-
-                        <tr>
-                            <td>11:05:12</td>
-                            <td>1 plant</td>
-                            <td>78%</td>
-                            <td>50 ml</td>
-                            <td><span class="badge success">Success</span></td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
-
-        <!-- Activity Log -->
-        <section class="panel">
-
-            <div class="panel-header">
-
-                <div>
-                    <h3>System Activity</h3>
-                    <p>Recent system events</p>
-                </div>
-
-            </div>
-
-
-            <div class="activity">
-
-                <div class="activity-item">
-                    <span class="activity-dot success-dot"></span>
-
-                    <div>
-                        <strong>Spray operation completed</strong>
-                        <p>14:32:18</p>
-                    </div>
-                </div>
-
-
-                <div class="activity-item">
-                    <span class="activity-dot"></span>
-
-                    <div>
-                        <strong>Water hyacinth detected</strong>
-                        <p>14:31:54</p>
-                    </div>
-                </div>
-
-
-                <div class="activity-item">
-                    <span class="activity-dot"></span>
-
-                    <div>
-                        <strong>Camera connected</strong>
-                        <p>14:20:03</p>
-                    </div>
-                </div>
-
-
-                <div class="activity-item">
-                    <span class="activity-dot"></span>
-
-                    <div>
-                        <strong>Spray system ready</strong>
-                        <p>13:45:12</p>
-                    </div>
-                </div>
-
-            </div>
-
-        </section>
-
-    </main>
-
-
-    <script>
-
-        function updateClock() {
-
-            const now = new Date();
-
-            const date = now.toLocaleDateString(
-                'en-GB',
-                {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                }
+        </div>
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>เวลา</th><th>จุดติดตั้ง</th><th>ประเภท</th><th>ผล</th></tr></thead>
+                <tbody id="sprayRows"></tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let overview = null;
+    let stats = null;
+
+    function timeCell(event) {
+        return h("td", { class: "num" }, h("strong", { class: "nowrap", text: `${event.time} น.` }), h("br"),
+            h("small", { class: "subtle", text: `${event.date} · ${relativeTime(event.epoch)}` }));
+    }
+
+    function emptyRow(colspan, text) {
+        return h("tr", {}, h("td", { colspan, class: "empty-cell", text }));
+    }
+
+    function renderStations() {
+        const body = $("#stationRows");
+        if (!overview) return;
+        if (overview.cameras.length === 0) {
+            body.replaceChildren(emptyRow(7, "ยังไม่มีจุดติดตั้ง — เพิ่มได้ที่หน้า “อุปกรณ์”"));
+            return;
+        }
+        const today = stats ? stats.today.by_camera : {};
+        body.replaceChildren(...overview.cameras.map((camera) => {
+            const cam = cameraState(camera.camera_status);
+            const pump = pumpState(camera.pump);
+            const counts = today[camera.id] || { detections: 0, sprays: 0 };
+            return h("tr", {},
+                h("td", {}, h("strong", { text: camera.name })),
+                h("td", {}, chip(cam.kind, cam.text)),
+                h("td", {}, chip(pump.kind, pump.text)),
+                h("td", { class: "num", text: camera.enabled && camera.fps ? `${camera.fps} ภาพ/วิ` : "-" }),
+                h("td", { class: "num", text: formatNumber(counts.detections) }),
+                h("td", { class: "num", text: formatNumber(counts.sprays) }),
+                h("td", {}, camera.enabled
+                    ? h("a", { class: "btn btn-ghost btn-sm", href: `/?cam=${encodeURIComponent(camera.id)}` },
+                        icon("i-video"), "ดูภาพ")
+                    : ""),
             );
+        }));
+    }
 
-            const time = now.toLocaleTimeString(
-                'en-GB'
-            );
+    function renderChart(hourly) {
+        const svg = $("#chart");
+        const W = 960, H = 250, left = 40, right = 8, top = 12, bottom = 30;
+        const plotW = W - left - right, plotH = H - top - bottom;
+        const peak = Math.max(1, ...hourly.map((hour) => Math.max(hour.detections, hour.sprays)));
+        const step = Math.max(1, Math.ceil(peak / 4));
+        const max = step * 4;
+        const parts = [];
+        const el = (tag, attrs, text) => {
+            const node = document.createElementNS(SVG_NS, tag);
+            for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+            if (text !== undefined) node.textContent = text;
+            return node;
+        };
 
-            document.getElementById("currentDate").textContent = date;
-            document.getElementById("currentTime").textContent = time;
+        for (let i = 0; i <= 4; i++) {
+            const y = top + plotH - (plotH * i) / 4;
+            parts.push(el("line", { x1: left, x2: W - right, y1: y, y2: y, class: "grid" }));
+            parts.push(el("text", { x: left - 8, y: y + 4, "text-anchor": "end" }, String(step * i)));
         }
 
-        updateClock();
+        const groupW = plotW / hourly.length;
+        const barW = Math.max(3, groupW * 0.3);
+        hourly.forEach((hour, i) => {
+            const x = left + i * groupW;
+            for (const [value, offset, cls, label] of [
+                [hour.detections, 0.17, "bar-det", "ตรวจพบ"],
+                [hour.sprays, 0.53, "bar-spray", "พ่นยา"],
+            ]) {
+                const height = (value / max) * plotH;
+                const bar = el("rect", {
+                    x: x + groupW * offset, y: top + plotH - height,
+                    width: barW, height: Math.max(height, value ? 2 : 0), rx: 2, class: cls,
+                });
+                bar.append(el("title", {}, `${hour.label} น. — ${label} ${value}`));
+                parts.push(bar);
+            }
+            if (i % 3 === 0 || i === hourly.length - 1) {
+                parts.push(el("text", { x: x + groupW / 2, y: H - 8, "text-anchor": "middle" }, hour.label));
+            }
+        });
 
-        setInterval(updateClock, 1000);
+        if (hourly.every((hour) => !hour.detections && !hour.sprays)) {
+            parts.push(el("text", {
+                x: left + plotW / 2, y: top + plotH / 2, "text-anchor": "middle",
+                style: "font-size:15px",
+            }, "ยังไม่มีการตรวจพบหรือการพ่นใน 24 ชั่วโมงที่ผ่านมา"));
+        }
+        svg.replaceChildren(...parts);
+    }
 
-    </script>
+    function renderTables() {
+        const detections = stats.recent_detections;
+        $("#detectionRows").replaceChildren(...(detections.length
+            ? detections.slice(0, 10).map((event) => h("tr", {},
+                timeCell(event),
+                h("td", { class: "nowrap", text: event.camera_name }),
+                h("td", { class: "num", text: `#${event.track_id}` }),
+                h("td", { class: "num", text: percent(event.confidence) }),
+            ))
+            : [emptyRow(4, "ยังไม่มีการตรวจพบ")]));
 
-</body>
+        const sprays = stats.recent_sprays;
+        $("#sprayRows").replaceChildren(...(sprays.length
+            ? sprays.slice(0, 10).map((event) => h("tr", {},
+                timeCell(event),
+                h("td", { class: "nowrap", text: event.camera_name }),
+                h("td", { text: SOURCE_TEXT[event.source] || event.source }),
+                h("td", {}, sprayOutcomeChip(event)),
+            ))
+            : [emptyRow(4, "ยังไม่มีการพ่น")]));
+    }
 
-</html>
+    pollOverview((data, error) => {
+        if (error) {
+            renderAlerts($("#alerts"), [{ level: "danger", text: error.message }]);
+            return;
+        }
+        overview = data;
+        renderAlerts($("#alerts"), data.alerts);
+        const counts = data.counts;
+        $("#onlineDevices").textContent =
+            `กล้อง ${counts.cameras_online}/${counts.cameras_total} · ปั๊ม ${counts.pumps_online}/${counts.cameras_total}`;
+        $("#onlineDetail").textContent = counts.cameras_online === counts.cameras_total && counts.pumps_online === counts.cameras_total
+            ? "ทุกอุปกรณ์ทำงานปกติ" : "มีอุปกรณ์ที่ต้องตรวจสอบ";
+        renderStations();
+    }, 3000);
 
+    pollStats((data, error) => {
+        if (!data) return;
+        stats = data;
+        $("#todayDetections").textContent = formatNumber(data.today.detections);
+        $("#todaySprays").textContent = formatNumber(data.today.sprays);
+        $("#totalDetections").textContent = `ทั้งหมด ${formatNumber(data.totals.detections)} ครั้ง`;
+        $("#totalSprays").textContent = `ทั้งหมด ${formatNumber(data.totals.sprays)} ครั้ง`;
+        $("#lastSpray").textContent = data.last_spray ? data.last_spray.time : "-";
+        $("#lastSprayAgo").textContent = data.last_spray
+            ? `${data.last_spray.date} · ${relativeTime(data.last_spray.epoch)}`
+            : "ยังไม่มีการพ่น";
+        renderChart(data.hourly);
+        renderTables();
+        renderStations();
+    }, 5000);
+</script>
+{% endblock %}
